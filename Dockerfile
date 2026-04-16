@@ -1,4 +1,4 @@
-FROM hugomods/hugo:exts-0.160.1 AS builder
+FROM hugomods/hugo:debian-reg-dart-sass-node-0.160.1 AS builder
 WORKDIR /src
 
 COPY . .
