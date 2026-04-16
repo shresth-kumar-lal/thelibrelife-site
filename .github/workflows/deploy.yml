@@ -13,7 +13,7 @@ permissions:
 
 env:
   ECR_REPOSITORY: thelibrelife-site
-  HUGO_VERSION: 0.148.0 
+  HUGO_VERSION: 0.160.1
 
 jobs:
   # JOB 1: Build and Deploy to GitHub Pages
