@@ -1,18 +1,69 @@
-name: Build and Push to AWS ECR
+name: Dual Deploy - GitHub Pages & AWS ECR
 
 on:
   push:
     branches:
       - main 
 
+# Sets permissions for GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 env:
   ECR_REPOSITORY: thelibrelife-site
+  HUGO_VERSION: 0.148.0 
 
 jobs:
-  build-and-push:
-    name: Build Docker Image
+  # JOB 1: Build and Deploy to GitHub Pages
+  deploy-to-pages:
+    name: Build & Deploy to GitHub Pages
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: true 
+          fetch-depth: 0
 
+      - name: Install Hugo CLI
+        run: |
+          wget -O ${{ runner.temp }}/hugo.deb https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb \
+          && sudo dpkg -i ${{ runner.temp }}/hugo.deb
+      
+      - name: Install Dart Sass
+        run: sudo snap install dart-sass
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build with Hugo
+        env:
+          HUGO_ENVIRONMENT: production
+          HUGO_ENV: production
+        run: |
+          hugo --gc --minify --baseURL "https://thelibrelife.org/"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # JOB 2: Build Docker Image and Push to AWS
+  push-to-ecr:
+    name: Build Docker & Push to AWS ECR
+    runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -42,4 +93,4 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
           
-          echo "Success! The image is safely stored in ECR."
+          echo "Success! Image pushed to ECR."
