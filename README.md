@@ -1,43 +1,45 @@
-# The Libre Life | Automated GitOps Deployment to AWS ECR 🚀
+# The Libre Life | Dual-Target GitOps Deployment Pipeline 🚀
 
 [![CI/CD Pipeline](https://github.com/shresth-kumar-lal/thelibrelife-site/actions/workflows/deploy.yml/badge.svg)](https://github.com/shresth-kumar-lal/thelibrelife-site/actions)
-[![Hugo Version](https://img.shields.io/badge/Hugo-v0.148.0_Extended-blue.svg)](https://gohugo.io/)
+[![Hugo Version](https://img.shields.io/badge/Hugo-v0.160.1_Extended-blue.svg)](https://gohugo.io/)
 [![Docker Base](https://img.shields.io/badge/Docker-Nginx_Alpine-blue.svg)](https://hub.docker.com/_/nginx)
 [![AWS ECR](https://img.shields.io/badge/AWS-Elastic_Container_Registry-FF9900.svg)](https://aws.amazon.com/ecr/)
+[![Live Site](https://img.shields.io/badge/Live-thelibrelife.org-success.svg)](https://thelibrelife.org)
 
-This repository houses the source code and fully automated continuous delivery pipeline for **The Libre Life**. It serves as a proof-of-concept for enterprise-grade GitOps, demonstrating how to securely containerize a modern static site and automate its delivery to a private AWS cloud registry.
+This repository houses the source code and fully automated continuous delivery pipeline for **[The Libre Life](https://thelibrelife.org)**. It serves as a proof-of-concept for enterprise-grade GitOps, demonstrating how to engineer a single GitHub Actions workflow that simultaneously deploys a highly-optimized static application to a global CDN, while securely packaging and pushing a production-ready Docker container to a private AWS cloud registry.
 
 ## Architecture & Pipeline Flow
 
-The deployment lifecycle is 100% automated using GitHub Actions. No manual server intervention is required.
+The deployment lifecycle is 100% automated using a parallel-job GitHub Actions pipeline. No manual server intervention is required.
 
-1. **Version Control:** Developer pushes markdown content or configuration changes to the `main` branch via SSH.
-2. **Environment Provisioning:** GitHub Actions spins up an ephemeral `ubuntu-latest` runner.
-3. **AWS Authentication:** The runner securely authenticates with AWS IAM using repository secrets to obtain temporary session tokens.
-4. **Multi-Stage Build:** - *Stage 1 (Builder):* Uses `hugomods/hugo:exts-0.148.0` to compile the Blowfish theme and minify the HTML/CSS/JS artifacts.
-   - *Stage 2 (Production):* Copies *only* the compiled static assets (`/public`) into a highly secure, lightweight `nginx:alpine` web server.
-5. **Artifact Storage:** The immutable Docker image is tagged with the unique Git commit SHA (for easy rollbacks) and pushed to a private **Amazon Elastic Container Registry (ECR)** in the `eu-north-1` (Stockholm) region.
+1. **Version Control:** Developer pushes markdown content or configuration changes to the `main` branch.
+2. **Parallel CI/CD Jobs:** GitHub Actions spins up ephemeral `ubuntu-latest` runners to execute two targets concurrently:
+   - **Target 1 (Production Hosting):** Injects the Dart Sass compiler, builds the static assets, and deploys directly to GitHub Pages CDN natively bound to the `thelibrelife.org` apex domain.
+   - **Target 2 (Enterprise Artifact):** Authenticates with AWS IAM via secure secrets, executes a multi-stage Docker build, and pushes an immutable, Nginx-backed container to a private Amazon Elastic Container Registry (ECR) in the `eu-north-1` (Stockholm) region.
+3. **DNS Routing:** Porkbun DNS dynamically routes `A` and `CNAME` requests to GitHub's global Anycast IP network, enforcing strict SSL/HTTPS.
+
 
 ## Technology Stack
 
-* **Static Site Generator:** Hugo Extended
-* **Theme:** Blowfish (Installed as a Git Submodule)
-* **Containerization:** Docker (Multi-stage builds, `.dockerignore` optimized)
-* **Web Server:** Nginx (Alpine Linux)
-* **CI/CD:** GitHub Actions
+* **Static Site Generator:** Hugo Extended (v0.160.1)
+* **Theme & UI:** Blowfish (Installed as a Git Submodule)
+* **Containerization:** Docker (Multi-stage builds, minimal Nginx Alpine image)
+* **CI/CD:** GitHub Actions (Dual-Target Matrix)
 * **Cloud Infrastructure:** AWS IAM, Amazon ECR
+* **Networking:** Porkbun DNS, GitHub Pages Global CDN
 
 ## Engineering Challenges Overcome
 
-Building an automated pipeline exposes the fragile nature of open-source dependency matrices. During the development of this CI/CD pipeline, several breaking changes were identified and resolved:
+Building an automated pipeline exposes the fragile nature of open-source dependency matrices. During the architectural design of this CI/CD pipeline, several complex challenges were identified and resolved:
 
-* **The `:latest` Tag Trap & Deterministic Builds:** Initial builds failed because the Docker base image used the `:latest` tag, which pulled a bleeding-edge version of Hugo that broke the theme's compiler. **Solution:** Refactored the `Dockerfile` to implement strict version pinning (`hugomods/hugo:exts-0.148.0`), ensuring immutable, deterministic builds that will not fracture during upstream updates.
-* **Deprecation Resolution in CI Logs:** The pipeline exposed deprecation warnings where legacy `locale` and `label` variables were placed at the top-level of the `languages.en.toml` file. **Solution:** Refactored the TOML structure to nest variables under the `[params]` block, satisfying modern Hugo compiler constraints.
-* **Regional Vault Mapping:** Pipeline authenticated with AWS successfully but failed to locate the ECR repository due to a geographic mismatch. **Solution:** Re-mapped GitHub Action secrets to explicitly target the `eu-north-1` endpoint.
+* **The `:latest` Tag Trap & Upstream Registry Changes:** Initial Docker builds failed because the `:latest` tag pulled bleeding-edge Hugo binaries that fractured the theme's native `Locale` compiler. When attempting to pin the version, the upstream registry maintainers altered their tagging taxonomy. **Solution:** Conducted registry reconnaissance and refactored the `Dockerfile` to explicitly pin `hugomods/hugo:debian-reg-dart-sass-node-0.160.1`, guaranteeing deterministic, immutable builds.
+* **Pipeline Synchronization:** Discovered a drift where the Docker pipeline and GitHub Pages pipeline were compiling with mismatched Hugo binaries, causing simultaneous failures and successes. **Solution:** Bound both workflow jobs to a unified `HUGO_VERSION` environment variable, ensuring absolute parity between the containerized artifact and the live CDN deployment.
+* **Deprecation Resolution in CI Logs:** The strict compiler flagged legacy top-level TOML parameters. **Solution:** Refactored the data structure to securely nest `locale` and `label` configurations inside the `[params]` block.
+* **Regional Vault Mapping:** The CI runner authenticated with AWS successfully but failed the push due to geographic routing restrictions. **Solution:** Remapped repository secrets to explicitly target the correct regional ECR endpoint (`eu-north-1`).
 
-## Run it Locally
+## Run the Container Locally
 
-Want to see the containerized application running on your own machine? You don't need AWS access to test the build. 
+Want to see the AWS-bound containerized application running on your own machine? You don't need AWS access to test the build. 
 
 Ensure you have [Docker](https://www.docker.com/) and Git installed, then run these commands:
 
@@ -51,5 +53,5 @@ cd thelibrelife-site
 # 3. Execute the multi-stage Docker build
 docker build -t thelibrelife-local .
 
-# 4. Run the Nginx container on port 8080
+# 4. Run the secure Nginx container on port 8080
 docker run -p 8080:80 thelibrelife-local
