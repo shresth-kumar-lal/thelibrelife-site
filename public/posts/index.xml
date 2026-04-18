@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on The Libre Life</title>
+    <link>http://localhost:1313/posts/</link>
+    <description>Recent content in Posts on The Libre Life</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <managingEditor>thelibrelife@proton.me (The Libre Life)</managingEditor>
+    <webMaster>thelibrelife@proton.me (The Libre Life)</webMaster>
+    <copyright>© 2026 The Libre Life</copyright>
+    <lastBuildDate>Fri, 17 Apr 2026 01:08:05 +0530</lastBuildDate><atom:link href="http://localhost:1313/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Linux Network Gaming Fix</title>
+      <link>http://localhost:1313/posts/linux-network-gaming-fix/</link>
+      <pubDate>Fri, 17 Apr 2026 01:08:05 +0530</pubDate>
+      <author>thelibrelife@proton.me (The Libre Life)</author>
+      <guid>http://localhost:1313/posts/linux-network-gaming-fix/</guid>
+      <description></description>
+      
+    </item>
+    
+  </channel>
+</rss>
