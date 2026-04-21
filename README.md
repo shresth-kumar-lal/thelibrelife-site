@@ -10,6 +10,52 @@ This repository houses the source code and fully automated continuous delivery p
 
 ## Architecture & Pipeline Flow
 
+```mermaid
+flowchart TD
+    Dev([Developer]) --&gt;|git push origin main| Repo[(GitHub Repository)]
+
+    subgraph CI_CD [&quot;CI/CD Pipeline (GitHub Actions)&quot;]
+        direction TB
+        Repo --&gt; Trigger{Push to main}
+        
+        Trigger --&gt; Job1[Job 1: Build &amp; Deploy to Pages]
+        Trigger --&gt; Job2[Job 2: Build &amp; Push Docker Image]
+
+        subgraph PagesPipeline [&quot;Target 1: Static Hosting&quot;]
+            Job1 --&gt; InstallHugo[Install Hugo v0.160.1 &amp; Dart Sass]
+            InstallHugo --&gt; Compile[Compile Static Assets]
+            Compile --&gt; Upload[Upload Pages Artifact]
+        end
+
+        subgraph DockerPipeline [&quot;Target 2: Enterprise Artifact&quot;]
+            Job2 --&gt; Auth[Authenticate AWS IAM]
+            Auth --&gt; BuildImg[Build Multi-stage Nginx Container]
+            BuildImg --&gt; TagImg[Tag Image with Git SHA]
+        end
+    end
+
+    subgraph Production [&quot;Production Hosting&quot;]
+        Upload --&gt;|Deploy| GHPages[GitHub Pages Global CDN]
+    end
+
+    subgraph AWSRegistry [&quot;AWS Cloud Vault&quot;]
+        TagImg --&gt;|Push Image| ECR[(Amazon ECR)]
+    end
+
+    subgraph DNS [&quot;DNS Routing (Porkbun)&quot;]
+        Domain(thelibrelife.org) -.-&gt;|A &amp; CNAME Records| GHPages
+    end
+
+    User([Internet User]) --&gt;|HTTPS Request| Domain
+
+    %% Styling
+    style GHPages fill:#e6ffe6,stroke:#2ca02c,stroke-width:2px,color:#000
+    style ECR fill:#fff3e6,stroke:#ff9900,stroke-width:2px,color:#000
+    style CI_CD fill:#f0f6ff,stroke:#0366d6,stroke-width:2px,color:#000
+    style Production fill:#f9f9f9,stroke:#333,stroke-width:1px,color:#000
+    style AWSRegistry fill:#f9f9f9,stroke:#333,stroke-width:1px,color:#000
+```
+
 The deployment lifecycle is 100% automated using a parallel-job GitHub Actions pipeline. No manual server intervention is required.
 
 1. **Version Control:** Developer pushes markdown content or configuration changes to the `main` branch.
